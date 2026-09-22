@@ -216,6 +216,13 @@
 <form id="surveyForm">
 
   <div class="section">
+    <div class="field">
+      <label class="q" for="fullName">Name <span class="opt">(optional)</span></label>
+      <input type="text" id="fullName" name="fullName" placeholder="Enter your name if you'd like">
+    </div>
+  </div>
+
+  <div class="section">
     <div class="section-head">
       <div class="num">1</div>
       <h2>General Workplace Issues</h2>
@@ -240,14 +247,14 @@
 
     <div class="field">
       <label class="q">Do you feel communication with management or other departments is clear and sufficient?</label>
-      <div class="choice-group scale" style="justify-content:space-between;">
-        <label class="choice"><input type="radio" name="communicationClarity" value="1"><span>1</span></label>
-        <label class="choice"><input type="radio" name="communicationClarity" value="2"><span>2</span></label>
-        <label class="choice"><input type="radio" name="communicationClarity" value="3"><span>3</span></label>
-        <label class="choice"><input type="radio" name="communicationClarity" value="4"><span>4</span></label>
-        <label class="choice"><input type="radio" name="communicationClarity" value="5"><span>5</span></label>
+      <div class="choice-group">
+        <label class="choice"><input type="radio" name="communicationClarity" value="Yes" id="commYes"><span>Yes</span></label>
+        <label class="choice"><input type="radio" name="communicationClarity" value="No" id="commNo"><span>No</span></label>
       </div>
-      <div class="scale-caps"><span>Not sufficient at all</span><span>Very sufficient</span></div>
+      <div class="conditional" id="commCond">
+        <label class="q" for="communicationDetails">Please describe <span class="opt">(optional)</span></label>
+        <textarea id="communicationDetails" name="communicationDetails"></textarea>
+      </div>
     </div>
 
     <div class="field">
@@ -362,6 +369,427 @@
   document.querySelectorAll('input[name="livesInHousing"]').forEach(r => {
     r.addEventListener('change', () => {
       document.getElementById('housingCond').classList.toggle('show', r.value === 'Yes' && r.checked);
+    });
+  });
+  document.querySelectorAll('input[name="communicationClarity"]').forEach(r => {
+    r.addEventListener('change', () => {
+      document.getElementById('commCond').classList.toggle('show', r.value === 'No' && r.checked);
+    });
+  });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    errorBanner.classList.remove('show');
+
+    if (!SCRIPT_URL || SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
+      errorBanner.textContent = 'The survey is not connected to the server yet. Please add the Apps Script URL in the code.';
+      errorBanner.classList.add('show');
+      return;
+    }
+
+    const fd = new FormData(form);
+    const payload = {};
+    fd.forEach((value, key) => { payload[key] = value; });
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting...';
+
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids CORS preflight
+      body: JSON.stringify(payload)
+    })
+      .then(() => {
+        form.style.display = 'none';
+        errorBanner.style.display = 'none';
+        document.getElementById('successScreen').classList.add('show');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      })
+      .catch(() => {
+        errorBanner.textContent = 'Something went wrong while submitting. Please try again.';
+        errorBanner.classList.add('show');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Survey';
+      });
+  });
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nursing Staff Comfort Survey — Apex Care</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal-900:#0B3843;
+    --teal-800:#0F4C5C;
+    --teal-700:#166374;
+    --sand-500:#D98A47;
+    --sand-100:#FBEBDA;
+    --bg:#F4F8F7;
+    --card:#FFFFFF;
+    --ink:#1E2A2E;
+    --muted:#64777A;
+    --line:#DCE6E5;
+    --line-soft:#EAF1F0;
+    --ok:#2F8F6B;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', 'Segoe UI', sans-serif;
+    line-height:1.7;
+    -webkit-font-smoothing:antialiased;
+  }
+  .bg-texture{
+    position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:
+      radial-gradient(60rem 40rem at 90% -10%, rgba(15,76,92,0.07), transparent 60%),
+      radial-gradient(50rem 35rem at -10% 105%, rgba(217,138,71,0.09), transparent 60%);
+  }
+
+  .progress-rail{
+    position:sticky; top:0; z-index:30;
+    height:4px; background:var(--line-soft);
+  }
+  .progress-fill{
+    height:100%; width:0%;
+    background:linear-gradient(90deg, var(--teal-700), var(--sand-500));
+    transition:width .15s ease-out;
+  }
+
+  header.hero{
+    padding:56px 20px 34px;
+    text-align:left;
+    max-width:640px; margin:0 auto;
+  }
+  .eyebrow{
+    font-size:13px; font-weight:600; color:var(--sand-500);
+    margin-bottom:14px;
+  }
+  header.hero h1{
+    font-family:'Fraunces', serif;
+    font-size:34px; font-weight:600; margin:0 0 16px;
+    color:var(--teal-900); letter-spacing:-0.01em; line-height:1.2;
+  }
+  header.hero p{
+    font-size:16px; color:var(--muted); margin:0;
+    max-width:520px; font-weight:400;
+  }
+  .brand-line{
+    display:flex; align-items:center; gap:8px;
+    font-size:13px; color:var(--teal-700); font-weight:600;
+    margin-top:22px; padding-top:20px;
+    border-top:1px solid var(--line);
+  }
+  .brand-line svg{ width:16px; height:16px; flex:none; }
+
+  form{ max-width:640px; margin:0 auto; padding:6px 20px 80px; }
+
+  .section{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:28px 26px;
+    margin-bottom:20px;
+    scroll-margin-top:26px;
+  }
+  .section-head{
+    display:flex; align-items:center; gap:12px;
+    margin-bottom:22px;
+  }
+  .section-head .num{
+    width:30px; height:30px; border-radius:9px;
+    background:var(--sand-100); color:var(--sand-500);
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:13px; flex:none;
+    font-family:'IBM Plex Sans', sans-serif;
+  }
+  .section-head h2{
+    font-family:'Fraunces', serif;
+    font-size:19px; font-weight:600; margin:0; color:var(--teal-900);
+  }
+
+  .field{ margin-bottom:18px; }
+  .field:last-child{ margin-bottom:0; }
+  label.q{
+    display:block; font-size:14.5px; font-weight:600;
+    color:var(--ink); margin-bottom:9px;
+  }
+  label.q .opt{ font-weight:400; color:var(--muted); font-size:13px; }
+
+  input[type=text], textarea, select{
+    width:100%;
+    font-family:inherit; font-size:14.5px; color:var(--ink);
+    background:#FBFDFD;
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    padding:11px 13px;
+    resize:vertical;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  textarea{ min-height:80px; }
+  input[type=text]:focus, textarea:focus, select:focus{
+    outline:none; border-color:var(--teal-700); background:#fff;
+  }
+
+  .choice-group{ display:flex; gap:10px; flex-wrap:wrap; }
+  .choice{ position:relative; }
+  .choice input{ position:absolute; opacity:0; inset:0; cursor:pointer; margin:0; }
+  .choice span{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:9px 18px;
+    border:1.5px solid var(--line);
+    border-radius:999px;
+    font-size:14px; font-weight:500; color:var(--ink);
+    background:#FBFDFD;
+    transition:all .15s ease;
+  }
+  .choice input:checked + span{
+    border-color:var(--teal-700);
+    background:var(--teal-800);
+    color:#fff;
+  }
+  .choice input:focus-visible + span{ outline:2px solid var(--sand-500); outline-offset:2px; }
+
+  .scale{ display:flex; align-items:center; justify-content:space-between; gap:6px; }
+  .scale .choice span{
+    width:40px; height:40px; padding:0; border-radius:12px;
+    justify-content:center; font-weight:600;
+  }
+  .scale-caps{
+    display:flex; justify-content:space-between;
+    font-size:12px; color:var(--muted); margin-top:8px;
+  }
+
+  .conditional{
+    margin-top:14px; padding-top:14px;
+    border-top:1px dashed var(--line);
+    display:none;
+  }
+  .conditional.show{ display:block; }
+
+  .submit-bar{ max-width:640px; margin:8px auto 0; padding:0 20px; }
+  button.submit{
+    width:100%;
+    background:var(--teal-800); color:#fff;
+    border:none; border-radius:14px;
+    padding:16px; font-size:16px; font-weight:600;
+    font-family:inherit; cursor:pointer;
+    transition:background .15s ease, transform .1s ease;
+  }
+  button.submit:hover{ background:var(--teal-700); }
+  button.submit:active{ transform:scale(.99); }
+  button.submit:disabled{ background:#A9BCBE; cursor:not-allowed; }
+
+  .note{ text-align:center; font-size:12.5px; color:var(--muted); margin-top:12px; }
+
+  .state-screen{
+    max-width:520px; margin:110px auto; padding:0 24px;
+    text-align:center; display:none;
+  }
+  .state-screen.show{ display:block; }
+  .state-screen .icon{
+    width:64px; height:64px; border-radius:50%;
+    background:var(--sand-100); color:var(--ok);
+    display:flex; align-items:center; justify-content:center;
+    margin:0 auto 20px;
+  }
+  .state-screen h2{ font-family:'Fraunces', serif; color:var(--teal-900); font-size:23px; margin:0 0 10px; }
+  .state-screen p{ color:var(--muted); font-size:14.5px; }
+
+  #error-banner{
+    display:none;
+    max-width:640px; margin:0 auto 16px; padding:12px 16px;
+    background:#FDEDED; border:1px solid #F3C6C6; color:#9B2C2C;
+    border-radius:10px; font-size:13.5px; text-align:center;
+  }
+  #error-banner.show{ display:block; }
+</style>
+</head>
+<body>
+<div class="bg-texture"></div>
+<div class="progress-rail"><div class="progress-fill" id="progressFill"></div></div>
+
+<header class="hero">
+  <div class="eyebrow">Apex Care Clinics — Buraydah &amp; Unayzah</div>
+  <h1>Tell us what would make your workday easier.</h1>
+  <p>Five minutes, straight answers, real changes. This covers your day-to-day work, your housing if the clinic provides it, and whatever you'd fix if you could. Nothing here is traced back to you.</p>
+  <div class="brand-line">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21s-7-4.6-9.5-9C.7 8.3 2 4.8 5.4 4.1c2-.4 3.8.5 4.9 2.1C11.4 4.6 13.2 3.7 15.2 4.1c3.4.7 4.7 4.2 2.9 7.9C15.6 16.4 12 21 12 21Z" stroke="#166374" stroke-width="1.7" stroke-linejoin="round"/><path d="M4.5 12h3l1.6-3 2.4 5.5 1.6-3h4.9" stroke="#166374" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Confidential — used only to improve working conditions
+  </div>
+</header>
+
+<div id="error-banner"></div>
+
+<form id="surveyForm">
+
+  <div class="section">
+    <div class="field">
+      <label class="q" for="fullName">Name <span class="opt">(optional)</span></label>
+      <input type="text" id="fullName" name="fullName" placeholder="Enter your name if you'd like">
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="num">1</div>
+      <h2>General Workplace Issues</h2>
+    </div>
+
+    <div class="field">
+      <label class="q" for="dailyDifficulties">What are the main difficulties you face in your daily work?</label>
+      <textarea id="dailyDifficulties" name="dailyDifficulties"></textarea>
+    </div>
+
+    <div class="field">
+      <label class="q">Do you experience an unbalanced workload during shifts?</label>
+      <div class="choice-group">
+        <label class="choice"><input type="radio" name="workloadImbalance" value="Yes"><span>Yes</span></label>
+        <label class="choice"><input type="radio" name="workloadImbalance" value="No"><span>No</span></label>
+      </div>
+      <div class="conditional" id="workloadCond">
+        <label class="q" for="workloadDetails">Please describe <span class="opt">(optional)</span></label>
+        <textarea id="workloadDetails" name="workloadDetails"></textarea>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="q">Do you feel communication with management or other departments is clear and sufficient?</label>
+      <div class="choice-group">
+        <label class="choice"><input type="radio" name="communicationClarity" value="Yes" id="commYes"><span>Yes</span></label>
+        <label class="choice"><input type="radio" name="communicationClarity" value="No" id="commNo"><span>No</span></label>
+      </div>
+      <div class="conditional" id="commCond">
+        <label class="q" for="communicationDetails">Please describe <span class="opt">(optional)</span></label>
+        <textarea id="communicationDetails" name="communicationDetails"></textarea>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="q">Do you get adequate rest breaks during your shift?</label>
+      <div class="choice-group">
+        <label class="choice"><input type="radio" name="restBreaks" value="Yes"><span>Yes</span></label>
+        <label class="choice"><input type="radio" name="restBreaks" value="No"><span>No</span></label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="q" for="suppliesShortage">Is there a shortage of any tools or supplies affecting your performance?</label>
+      <textarea id="suppliesShortage" name="suppliesShortage"></textarea>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="num">2</div>
+      <h2>Housing Issues (if applicable)</h2>
+    </div>
+
+    <div class="field">
+      <label class="q">Do you currently live in company-provided housing?</label>
+      <div class="choice-group">
+        <label class="choice"><input type="radio" name="livesInHousing" value="Yes" id="housingYes"><span>Yes</span></label>
+        <label class="choice"><input type="radio" name="livesInHousing" value="No" id="housingNo"><span>No</span></label>
+      </div>
+    </div>
+
+    <div class="conditional" id="housingCond">
+      <div class="field">
+        <label class="q">How satisfied are you with the overall condition of the housing?</label>
+        <div class="choice-group scale" style="justify-content:space-between;">
+          <label class="choice"><input type="radio" name="housingSatisfaction" value="1"><span>1</span></label>
+          <label class="choice"><input type="radio" name="housingSatisfaction" value="2"><span>2</span></label>
+          <label class="choice"><input type="radio" name="housingSatisfaction" value="3"><span>3</span></label>
+          <label class="choice"><input type="radio" name="housingSatisfaction" value="4"><span>4</span></label>
+          <label class="choice"><input type="radio" name="housingSatisfaction" value="5"><span>5</span></label>
+        </div>
+        <div class="scale-caps"><span>Not satisfied at all</span><span>Very satisfied</span></div>
+      </div>
+      <div class="field">
+        <label class="q" for="housingProblems">Have you faced any issues with the housing? (maintenance, cleanliness, transportation, privacy, etc.)</label>
+        <textarea id="housingProblems" name="housingProblems"></textarea>
+      </div>
+      <div class="field">
+        <label class="q" for="housingSuggestions">What improvements would you suggest for the housing conditions?</label>
+        <textarea id="housingSuggestions" name="housingSuggestions"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <div class="num">3</div>
+      <h2>Improvements &amp; Suggestions</h2>
+    </div>
+
+    <div class="field">
+      <label class="q" for="comfortImprovement">What do you think would directly improve your comfort at work?</label>
+      <textarea id="comfortImprovement" name="comfortImprovement"></textarea>
+    </div>
+    <div class="field">
+      <label class="q" for="shiftSuggestions">Do you have suggestions for improving the shift system or task distribution?</label>
+      <textarea id="shiftSuggestions" name="shiftSuggestions"></textarea>
+    </div>
+    <div class="field">
+      <label class="q" for="trainingNeeded">Is there any additional training or support you feel you need?</label>
+      <textarea id="trainingNeeded" name="trainingNeeded"></textarea>
+    </div>
+    <div class="field">
+      <label class="q" for="otherNotes">Any other comments or suggestions? <span class="opt">(optional)</span></label>
+      <textarea id="otherNotes" name="otherNotes"></textarea>
+    </div>
+  </div>
+
+  <div class="submit-bar">
+    <button type="submit" class="submit" id="submitBtn">Submit Survey</button>
+    <p class="note">Your answers are confidential and used only to improve the work environment.</p>
+  </div>
+</form>
+
+<div class="state-screen" id="successScreen">
+  <div class="icon">
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#2F8F6B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+  <h2>Thank you</h2>
+  <p>Your answers were received successfully. Your feedback directly helps improve the work and housing environment for nursing staff.</p>
+</div>
+
+<script>
+  // Paste your Apps Script Web App URL here after deployment — must end with /exec
+  const SCRIPT_URL = 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+
+  const form = document.getElementById('surveyForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const errorBanner = document.getElementById('error-banner');
+  const progressFill = document.getElementById('progressFill');
+
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement;
+    const scrolled = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
+    progressFill.style.width = Math.min(100, Math.max(0, scrolled)) + '%';
+  });
+
+  document.querySelectorAll('input[name="workloadImbalance"]').forEach(r => {
+    r.addEventListener('change', () => {
+      document.getElementById('workloadCond').classList.toggle('show', r.value === 'Yes' && r.checked);
+    });
+  });
+  document.querySelectorAll('input[name="livesInHousing"]').forEach(r => {
+    r.addEventListener('change', () => {
+      document.getElementById('housingCond').classList.toggle('show', r.value === 'Yes' && r.checked);
+    });
+  });
+  document.querySelectorAll('input[name="communicationClarity"]').forEach(r => {
+    r.addEventListener('change', () => {
+      document.getElementById('commCond').classList.toggle('show', r.value === 'No' && r.checked);
     });
   });
 
